@@ -1,5 +1,6 @@
 import numpy as np
 
+#key for paper, this calcualted head angle
 def calculate_angle(position1, position2):
     delta_x = position2[0] - position1[0]
     delta_y = position2[1] - position1[1]
@@ -34,23 +35,20 @@ def extract_features(observation):
 def cooperative_strategy_continuous(features, agent_type, other_agent_features, evader_position, agent_index, total_non_active):
     if agent_type == 'active':
         optimal_heading = calculate_angle(features['self_pos'], evader_position)
-        print(f"Active pursuer {agent_index} heading to evader at angle {optimal_heading}")
         action = heading_to_continuous_action(optimal_heading, max_speed=1.0)
     elif agent_type == 'non-active':
         strategic_position = calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active)
         optimal_heading = calculate_angle(features['self_pos'], strategic_position)
-        print(f"Non-active pursuer {agent_index} heading to strategic position at angle {optimal_heading}")
         action = heading_to_continuous_action(optimal_heading, max_speed=0.5)
     else:
         action = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
     return action
+
 def heading_to_continuous_action(heading, max_speed):
     speed = max_speed
     action_x = np.clip(0.5 * (speed * np.cos(heading) + 1.0), 0.0, 1.0)
     action_y = np.clip(0.5 * (speed * np.sin(heading) + 1.0), 0.0, 1.0)
-    # Ensure the environment expects an array of length 5
     return np.array([action_x, action_y, 0.0, 0.0, 0.0])
-
 
 def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
     angle_increment = 2 * np.pi / total_non_active
@@ -61,14 +59,13 @@ def calculate_non_active_position(features, other_agent_features, evader_positio
     print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
     return strategic_position
 
-
 def evader_strategy(features, pursuer_features, evader_speed=1.5):
     min_theta = float('inf')
     weakest_link = None
     for i, f_i in enumerate(pursuer_features):
         for j, f_j in enumerate(pursuer_features):
             if i != j:
-                theta_ij = calculate_overlapping_angle(f_i, f_j)
+                theta_ij = calculate_overlapping_angle(f_i, f_j) #we do this to find the weakest link
                 if theta_ij < min_theta:
                     min_theta = theta_ij
                     weakest_link = (i, j)
@@ -81,8 +78,6 @@ def evader_strategy(features, pursuer_features, evader_speed=1.5):
         evader_action = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
     
     return evader_action
-
-
 
 def calculate_overlapping_angle(features_i, features_j):
     di = features_i['distances_to_agents'][0]
@@ -119,14 +114,9 @@ def optimal_evader_heading(features_e, features_i, features_j, evader_speed=1.5)
         else:
             action_x, action_y = 0.5, 0.5
     except (ValueError, ZeroDivisionError):
-        action_x, action_y = 0.5, 0.5
+        action_x, action_y = 0.5, 0.5 #incase computation error?
 
     return np.array([action_x, action_y, 0.0, 0.0, 0.0])
-
-
-
-
-
 
 
 def initialize_agent_types(num_active_pursuers, num_total_pursuers):
