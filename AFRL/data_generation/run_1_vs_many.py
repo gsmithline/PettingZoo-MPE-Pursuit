@@ -7,9 +7,11 @@ import random
 def initialize_speeds():
     global pursuer_speed, evader_speed
     
-    pursuer_speed = 1.5  # Constant speed for all pursuers
+    pursuer_speed = 1.5  #just do constant speed for all pursuers following the paper
     evader_speed = np.random.uniform(2.2, 3.2)
-
+'''
+HYPER Parameter Initialization
+'''
 pursuer_speed = 0
 evader_speed = 0
 game_counter = 0
@@ -43,7 +45,7 @@ for i in range(1, 20):
         all_features = {agent: extract_features(observations[agent], agent, agent_types.get(agent, 'evader'), num_total_pursuers, 0, num_evaders) for agent in env.agents}
         agent_types = update_agent_types(agent_types, list(all_features.values()), num_active_pursuers)
 
-        non_active_counter = 0
+        non_active_counter = 0 
         active_counter = 0
 
         for agent in env.agents:
@@ -66,9 +68,9 @@ for i in range(1, 20):
                             non_active_counter += 1
             else:
                 action = evader_strategy(features, other_agent_features, evader_speed)
-
+            #update agent action 
             actions[agent] = action
-
+            #append data to total_data
             total_data.append({
                 'game': i,
                 'round': round_counter,
@@ -89,17 +91,17 @@ for i in range(1, 20):
                 'other_agent_velocities': features['other_agent_velocities'].tolist()
             })
 
-        # Extract positions and headings for updates
+        #pull positins for pursuers and evader for headings and updates
         pursuer_positions = [features['self_pos'] for agent, features in all_features.items() if 'adversary' in agent]
         evader_position = [features['self_pos'] for agent, features in all_features.items() if 'agent' in agent][0]
         pursuer_headings = [calculate_angle(features['self_pos'], actions[agent][1:3]) for agent, features in all_features.items() if 'adversary' in agent]
         evader_heading = calculate_angle(evader_position, actions['agent_0'][1:3])
         
-        # Update positions based on ODEs
+        #update positions following ODEs
         new_pursuer_positions = update_positions(pursuer_positions, [pursuer_speed] * len(pursuer_positions), pursuer_headings, delta_t=1)
         new_evader_position = update_positions([evader_position], [evader_speed], [evader_heading], delta_t=1)[0]
 
-        # Update the observations with the new positions
+        #update observation to new position
         for idx, agent in enumerate(env.agents):
             if 'adversary' in agent:
                 observations[agent][2:4] = new_pursuer_positions[idx]
@@ -118,6 +120,6 @@ for i in range(1, 20):
     env.close()
 
 df = pd.DataFrame(total_data)
-df.to_csv('simulation_data_with_features.csv', index=False)
+df.to_csv('simulation_data_with_features_1_vs_many.csv', index=False)
 
 print("Data saved to simulation_data_with_features.csv")

@@ -58,7 +58,6 @@ def update_positions(positions, velocities, headings, delta_t):
     return new_positions
 
 #creates agents and does the initial classification of agents
-
 def initialize_agent_types(observations, num_active_pursuers):
     distances_to_evader = [] 
     #TODO: Make this plural to evaders
@@ -104,7 +103,7 @@ import numpy as np
 
 def extract_features(observation, agent_name, agent_type, num_pursuers, num_landmarks, num_evaders):
     self_vel = observation[:2]
-    self_pos = observation[2:4]  # Assuming position is at indices 2 and 3
+    self_pos = observation[2:4] # position of the agent
     landmark_rel_positions = observation[4:4+2*num_landmarks]
     other_agent_rel_positions = observation[4+2*num_landmarks:4+2*num_landmarks+2*(num_pursuers+num_evaders-1)]
     other_agent_velocities = observation[4+2*num_landmarks+2*(num_pursuers+num_evaders-1):]
@@ -472,9 +471,9 @@ def optimal_evader_heading(features_e, features_i, features_j, evader_speed=1.5)
             if action_x < 0 and action_y == 0:
                 print("Moving left")
             #randomly set the action_x and action_y to be between -1 and 1
-            action_x = np.random.uniform(-1, 1) 
-            action_y = np.random.uniform(-1, 1)
-
+            #action_x = np.random.uniform(-1, 1) 
+            #action_y = np.random.uniform(-1, 1)
+            '''
             if action_x < 0 and action_y < 0:
                 print("Moving left-down")   
                 return np.array([0.0, -action_x, 0.0, -action_y, 0.0])
@@ -499,6 +498,8 @@ def optimal_evader_heading(features_e, features_i, features_j, evader_speed=1.5)
             else:
                 print("Moving up")
                 return np.array([0.0, 0.0, 0.0, 0.0, action_y])
+            '''
+            return np.array([0.0, action_x, action_y, 0.0, 0.0])
 
         else:
             action_x, action_y = 0.5, 0.5
