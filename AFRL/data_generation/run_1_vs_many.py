@@ -1,4 +1,4 @@
-from pursuit_evasion import extract_features, cooperative_strategy_continuous, evader_strategy, update_agent_types, initialize_agent_types, update_positions, calculate_angle
+from pursuit_evasion_1_vs_many import extract_features, cooperative_strategy_continuous, evader_strategy, update_agent_types, initialize_agent_types, update_positions, calculate_angle
 from pettingzoo.mpe import simple_tag_v3
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ total_data = []
 
 initialize_speeds()
 
-for i in range(1, 3): 
+for i in range(1, 20): 
     seed = random.randint(1, 10000)
 
     env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True, render_mode='human')

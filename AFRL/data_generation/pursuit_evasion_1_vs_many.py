@@ -189,13 +189,6 @@ def cooperative_strategy_continuous(features, agent_type, other_agent_features, 
 
 
 #This calculates the continuous action from the heading angle, following the paper
-'''
-def heading_to_continuous_action(heading, max_speed):
-    speed = max_speed
-    action_x = np.clip(0.5 * (speed * np.cos(heading) + 1.0), 0.0, 1.0)
-    action_y = np.clip(0.5 * (speed * np.sin(heading) + 1.0), 0.0, 1.0)
-    return np.array([0.0, action_x, action_y, 0.0, 0.0])
-'''
 def heading_to_continuous_action(heading, max_speed):
     speed = max_speed
     action_x = np.clip(speed * np.cos(heading), -1.0, 1.0)
@@ -269,11 +262,12 @@ def calculate_non_active_position(features, other_agent_features, evader_positio
     print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
     return strategic_position
 '''
-
+#calculate the strategic position for non-active pursuers
+'''
 def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
     active_pursuer_positions = [f['self_pos'] for f in other_agent_features if f['agent_type'] == 'active']
 
-    if len(active_pursuer_positions) < 1:
+    if len(active_pursuer_positions) < 1: # no active pursuers
         angle_increment = 2 * np.pi / total_non_active
         angle_offset = agent_index * angle_increment
         x_offset = radius * np.cos(angle_offset)
@@ -291,6 +285,30 @@ def calculate_non_active_position(features, other_agent_features, evader_positio
 
     print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
     return strategic_position
+'''
+def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
+    active_pursuer_positions = [f['self_pos'] for f in other_agent_features if f['agent_type'] == 'active']
+    num_active_pursuers = len(active_pursuer_positions)
+
+    if num_active_pursuers < 1:
+        angle_increment = 2 * np.pi / total_non_active
+        angle_offset = agent_index * angle_increment
+        x_offset = radius * np.cos(angle_offset)
+        y_offset = radius * np.sin(angle_offset)
+        strategic_position = evader_position + np.array([x_offset, y_offset])
+    else:
+        # Calculate the mean angle to evader for all active pursuers
+        mean_angle_to_evader = np.mean([calculate_angle(pos, evader_position) for pos in active_pursuer_positions])
+        angle_increment = (2 * np.pi / total_non_active) / num_active_pursuers
+        support_angle = mean_angle_to_evader + (agent_index * angle_increment)
+        
+        x_offset = radius * np.cos(support_angle)
+        y_offset = radius * np.sin(support_angle)
+        strategic_position = evader_position + np.array([x_offset, y_offset])
+
+    print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
+    return strategic_position
+
 
 
 
