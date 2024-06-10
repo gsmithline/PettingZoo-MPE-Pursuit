@@ -36,24 +36,4 @@ def evader_strategy(evader, pursuers):
     heading = calculate_angle(evader['position'], interception_point)
     return heading
 
-# Main loop for the simulation
-def simulation_loop(env, num_steps=100):
-    for step in range(num_steps):
-        actions = {}
-        for agent in env.agents:
-            if 'adversary' in agent:  # Pursuer
-                pursuer_index = int(agent.split('_')[1])
-                pursuer = {'position': env.positions[pursuer_index], 'speed': env.speeds[pursuer_index]}
-                evader = {'position': env.evader_positions[0], 'speed': env.evader_speeds[0]}
-                heading = pursuer_strategy(pursuer, evader)
-                actions[agent] = heading
-            elif 'agent' in agent:  # Evader
-                evader_index = int(agent.split('_')[1])
-                evader = {'position': env.evader_positions[evader_index], 'speed': env.evader_speeds[evader_index]}
-                pursuers = [{'position': env.positions[p], 'speed': env.speeds[p]} for p in range(len(env.positions))]
-                heading = evader_strategy(evader, pursuers)
-                actions[agent] = heading
-        env.step(actions)
-        if env.done:
-            break
-    return env.get_results()
+
