@@ -2,6 +2,7 @@ import numpy as np
 from pettingzoo.mpe import simple_tag_v3
 import pandas as pd
 import random
+from scipy.optimize import minimize
 
 # Compute the angle between two points in radians
 def calculate_angle(position1, position2):
@@ -9,6 +10,37 @@ def calculate_angle(position1, position2):
     delta_y = position2[1] - position1[1]
     angle = np.arctan2(delta_y, delta_x)
     return angle
+
+# Initialize the Value Function
+def initialize_value_function(positions):
+    value_function = {}
+    for pos in positions:
+        value_function[tuple(pos)] = 0  
+    return value_function
+
+# Compute the Hamiltonian
+def compute_hamiltonian(pursuer_pos, evader_pos, pursuer_vel, evader_vel, co_states):
+    H = pursuer_vel * (co_states[0] * np.cos(pursuer_pos[2]) + co_states[1] * np.sin(pursuer_pos[2])) + \
+        evader_vel * (co_states[2] * np.cos(evader_pos[2]) + co_states[3] * np.sin(evader_pos[2]))
+    return H
+
+# Update Control Laws using a numerical solver
+def update_control_laws(pursuer_pos, evader_pos, co_states):
+    def pursuer_control(heading):
+        return -np.dot(co_states[:2], np.array([np.cos(heading), np.sin(heading)]))
+    
+    def evader_control(heading):
+        return np.dot(co_states[2:], np.array([np.cos(heading), np.sin(heading)]))
+
+    pursuer_heading = minimize(pursuer_control, 0).x[0]
+    evader_heading = minimize(evader_control, 0).x[0]
+    return pursuer_heading, evader_heading
+
+# Update the Value Function
+def update_value_function(value_function, positions, control_laws):
+    for pos in positions:
+        value_function[tuple(pos)] = max(control_laws) - min(control_laws)  # Simplified update
+    return value_function
 
 # Calculate the Apollonius circle for the interception point
 def calculate_apollonius_circle(position1, position2, speed_ratio):
@@ -28,7 +60,7 @@ def update_positions(positions, velocities, headings, delta_t):
     for pos, vel, heading in zip(positions, velocities, headings):
         new_x = pos[0] + vel * np.cos(heading) * delta_t
         new_y = pos[1] + vel * np.sin(heading) * delta_t
-        new_positions.append(np.array([new_x, new_y]))
+        new_positions.append(np.array([new_x, new_y, heading]))  # Include heading in the position array
     return new_positions
 
 # Initialize agent types based on the distance to evaders
@@ -119,6 +151,10 @@ def main_loop():
 
         assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
         
+        # Initialize Value Function
+        initial_positions = [np.concatenate((observations[agent][2:4], [0])) for agent in env.agents]  # Include heading (0) in the position
+        value_function = initialize_value_function(initial_positions)
+        
         # Debugging: print assignments
         print("Assignments:", assignments)
         
@@ -133,13 +169,13 @@ def main_loop():
                 features = all_features[agent]
                 if 'adversary' in agent:
                     if agent in assignments:
-                        evader_position = observations[assignments[agent]][2:4]
+                        evader_position = np.concatenate((observations[assignments[agent]][2:4], [0]))  # Include heading (0) in the position
                         action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
                     else:
                         print(f"Error: {agent} has no assigned evader.")
                         continue
                 else:
-                    pursuer_positions = [observations[p][2:4] for p in assignments if assignments[p] == agent]
+                    pursuer_positions = [np.concatenate((observations[p][2:4], [0])) for p in assignments if assignments[p] == agent]  # Include heading (0) in the position
                     action = optimal_evader_heading(features, pursuer_positions, evader_speed)
 
                 actions[agent] = action
@@ -160,8 +196,25 @@ def main_loop():
                     'angles_to_agents': features['angles_to_agents'],
                     'distances_to_landmarks': features['distances_to_landmarks'],
                     'angles_to_landmarks': features['angles_to_landmarks'],
-                    'other_agent_velocities': features['other_agent_velocities'].tolist()
+                    'other_agent_velocities': features['other_agent_velocities'].tolist(), 
+                    'value_function': None,
+                    'interception_point': None
                 })
+
+            for pos in initial_positions:
+                # Compute Hamiltonian for each position
+                co_states = np.random.rand(4)  # Placeholder co-states 
+                H = compute_hamiltonian(pos, evader_position, pursuer_speed, evader_speed, co_states)
+                
+                # Update Control Laws based on Hamiltonian
+                pursuer_heading, evader_heading = update_control_laws(pos, evader_position, co_states)
+                
+                # Update Value Function
+                control_laws = [pursuer_heading, evader_heading]  # Simplified control laws list
+                value_function = update_value_function(value_function, initial_positions, control_laws)
+                
+                # Compute Interception Points
+                interception_point = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
 
             observations, rewards, terminations, truncations, infos = env.step(actions)
 
@@ -169,6 +222,9 @@ def main_loop():
                 total_data[-1]['reward'] = rewards[agent]
                 total_data[-1]['termination'] = terminations[agent]
                 total_data[-1]['truncation'] = truncations[agent]
+                if 'adversary' in agent:
+                    total_data[-1]['interception_point'] = interception_point
+                    total_data[-1]['value_function'] = value_function[tuple(pos)].tolist()
 
             env.render()
 
