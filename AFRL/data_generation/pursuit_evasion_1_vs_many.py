@@ -60,7 +60,6 @@ def update_positions(positions, velocities, headings, delta_t):
 #creates agents and does the initial classification of agents
 def initialize_agent_types(observations, num_active_pursuers):
     distances_to_evader = [] 
-    #TODO: Make this plural to evaders
     evader_position = observations['agent_0'][2:4]  # get evader position
 
     for agent in observations:

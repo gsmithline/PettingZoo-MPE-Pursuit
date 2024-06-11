@@ -15,7 +15,7 @@ def calculate_angle(position1, position2):
 def initialize_value_function(positions):
     value_function = {}
     for pos in positions:
-        value_function[tuple(pos)] = 0  # Initial value can be zero or some function of the position
+        value_function[tuple(pos)] = 0 
     return value_function
 
 # Compute the Hamiltonian
@@ -151,102 +151,115 @@ def compute_co_states(value_function, position):
         co_states[i] = (value_plus - value_minus) / (2 * epsilon)
 
     return co_states
+def run_many_vs_many():
+    pursuer_speed = 0
+    evader_speed = 0
+    game_counter = 0
+    pursuers_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    evaders_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    main_loop(pursuer_speed=pursuer_speed, evader_speed=evader_speed, evaders_array=evaders_array, pursuers_array=pursuers_array, game_counter=game_counter)
 
-def main_loop():
-    for i in range(1, 6):
-        seed = random.randint(1, 10000)
+def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_array=[], game_counter=0):
+    total_data = []
+    for evaders in evaders_array:
+        num_evaders = evaders
+        for pursuer in pursuers_array:
+            num_total_pursuers = pursuer
+            game_counter += 1
+            for i in range(1, 2):
+                seed = random.randint(1, 10000)
 
-        pursuer_speed = 1.5
-        evader_speed = 2.5
-        num_total_pursuers = 5
-        num_evaders = 5  # works when pursuers = evaders 
-        total_data = []
+                pursuer_speed = 1.5
+                evader_speed = 2.5 
 
-        env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
-        observations, infos = env.reset(seed=seed)
+                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
+                observations, infos = env.reset(seed=seed)
 
-        assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
-        
-        # Initialize Value Function
-        initial_positions = [np.concatenate((observations[agent][2:4], [0])) for agent in env.agents]  # Include heading (0) in the position
-        value_function = initialize_value_function(initial_positions)
-        
-        # Debugging: print assignments
-        print("Assignments:", assignments)
-        
-        round_counter = 0
-
-        while env.agents:
-            round_counter += 1
-            actions = {}
-            all_features = {agent: extract_features(observations[agent], agent, num_total_pursuers, 0, num_evaders) for agent in env.agents}
-
-            for agent in env.agents:
-                features = all_features[agent]
-                if 'adversary' in agent:
-                    if agent in assignments:
-                        evader_position = np.concatenate((observations[assignments[agent]][2:4], [0]))  # Include heading (0) in the position
-                        action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
-                    else:
-                        print(f"Error: {agent} has no assigned evader.")
-                        continue
-                else:
-                    pursuer_positions = [np.concatenate((observations[p][2:4], [0])) for p in assignments if assignments[p] == agent]  # Include heading (0) in the position
-                    action = optimal_evader_heading(features, pursuer_positions, evader_speed)
-
-                actions[agent] = action
-
-                total_data.append({
-                    'game': i,
-                    'round': round_counter,
-                    'agent': agent,
-                    'seed': seed,
-                    'observation': observations[agent].tolist(),
-                    'action': action.tolist(),
-                    'reward': None,
-                    'termination': None,
-                    'truncation': None,
-                    'self_vel': features['self_vel'].tolist(),
-                    'self_pos': features['self_pos'].tolist(),
-                    'distances_to_agents': features['distances_to_agents'],
-                    'angles_to_agents': features['angles_to_agents'],
-                    'distances_to_landmarks': features['distances_to_landmarks'],
-                    'angles_to_landmarks': features['angles_to_landmarks'],
-                    'other_agent_velocities': features['other_agent_velocities'].tolist(),
-                    'value_function': value_function,
-                    'interception_point': None
-
-                })
-
-            for pos in initial_positions:
-                co_states = compute_co_states(value_function, pos)  
-                H = compute_hamiltonian(pos, evader_position, pursuer_speed, evader_speed, co_states)
+                assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
                 
-                #update control laws 
-                pursuer_heading, evader_heading = update_control_laws(pos, evader_position, co_states)
+                # Initialize Value Function
+                initial_positions = [np.concatenate((observations[agent][2:4], [0])) for agent in env.agents]  # Include heading (0) in the position
+                value_function = initialize_value_function(initial_positions)
                 
-                #update value functions
-                control_laws = [pursuer_heading, evader_heading]  # Simplified control laws list
-                value_function = update_value_function(value_function, initial_positions, control_laws)
+                # Debugging: print assignments
+                print("Assignments:", assignments)
                 
-                #get interaction points 
-                interception_point = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
+                round_counter = 0
 
-            observations, rewards, terminations, truncations, infos = env.step(actions)
+                while env.agents:
+                    round_counter += 1
+                    actions = {}
+                    all_features = {agent: extract_features(observations[agent], agent, num_total_pursuers, 0, num_evaders) for agent in env.agents}
 
-            for agent in env.agents:
-                total_data[-1]['reward'] = rewards[agent]
-                total_data[-1]['termination'] = terminations[agent]
-                total_data[-1]['truncation'] = truncations[agent]
-                total_data[-1]['interception_point'] = interception_point
-                total_data[-1]['value_function'] = value_function
+                    for agent in env.agents:
+                        features = all_features[agent]
+                        if 'adversary' in agent:
+                            if agent in assignments:
+                                evader_position = np.concatenate((observations[assignments[agent]][2:4], [0]))  # Include heading (0) in the position
+                                action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
+                            else:
+                                print(f"Error: {agent} has no assigned evader.")
+                                continue
+                        else:
+                            pursuer_positions = [np.concatenate((observations[p][2:4], [0])) for p in assignments if assignments[p] == agent]  # Include heading (0) in the position
+                            action = optimal_evader_heading(features, pursuer_positions, evader_speed)
 
-            env.render()
+                        actions[agent] = action
 
-        env.close()
+                        total_data.append({
+                            'game': game_counter,
+                            'number_of_game_type': i, # Game round within the game
+                            'game_type': 'Pursuers: {} vs Evaders: {}'.format(num_total_pursuers, num_evaders),  # '1 vs many' or 'many vs many
+                            'round': round_counter,
+                            'agent': agent,
+                            'seed': seed,
+                            'observation': observations[agent].tolist(),
+                            'action': action.tolist(),
+                            'reward': None,
+                            'termination': None,
+                            'truncation': None,
+                            'self_vel': features['self_vel'].tolist(),
+                            'self_pos': features['self_pos'].tolist(),
+                            'distances_to_agents': features['distances_to_agents'],
+                            'angles_to_agents': features['angles_to_agents'],
+                            'distances_to_landmarks': features['distances_to_landmarks'],
+                            'angles_to_landmarks': features['angles_to_landmarks'],
+                            'other_agent_velocities': features['other_agent_velocities'].tolist(),
+                            'value_function': value_function,
+                            'interception_point': None
 
-        df = pd.DataFrame(total_data)
-        df.to_csv('simulation_data_with_features_many_vs_many.csv', index=False)
-        print("Data saved to simulation_data_with_features.csv")
+                        })
 
-main_loop()
+                    for pos in initial_positions:
+                        co_states = compute_co_states(value_function, pos)  
+                        H = compute_hamiltonian(pos, evader_position, pursuer_speed, evader_speed, co_states)
+                        
+                        #update control laws 
+                        pursuer_heading, evader_heading = update_control_laws(pos, evader_position, co_states)
+                        
+                        #update value functions
+                        control_laws = [pursuer_heading, evader_heading]  # Simplified control laws list
+                        value_function = update_value_function(value_function, initial_positions, control_laws)
+                        
+                        #get interaction points 
+                        interception_point = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
+
+                    observations, rewards, terminations, truncations, infos = env.step(actions)
+
+                    for agent in env.agents:
+                        total_data[-1]['reward'] = rewards[agent]
+                        total_data[-1]['termination'] = terminations[agent]
+                        total_data[-1]['truncation'] = truncations[agent]
+                        total_data[-1]['interception_point'] = interception_point
+                        total_data[-1]['value_function'] = value_function
+
+                    env.render()
+
+                env.close()
+
+    #save data to dataframe 
+    df = pd.DataFrame(total_data)
+    df.to_csv('simulation_data_with_features_many_vs_many.csv', index=False)
+    print("Data saved to simulation_data_with_features.csv")
+
+run_many_vs_many()
