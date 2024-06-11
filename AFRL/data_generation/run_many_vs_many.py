@@ -151,15 +151,15 @@ def compute_co_states(value_function, position):
         co_states[i] = (value_plus - value_minus) / (2 * epsilon)
 
     return co_states
-def run_many_vs_many():
+def run_many_vs_many(HumanRender=False):
     pursuer_speed = 0
     evader_speed = 0
     game_counter = 0
     pursuers_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
     evaders_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
-    main_loop(pursuer_speed=pursuer_speed, evader_speed=evader_speed, evaders_array=evaders_array, pursuers_array=pursuers_array, game_counter=game_counter)
+    main_loop(pursuer_speed=pursuer_speed, evader_speed=evader_speed, evaders_array=evaders_array, pursuers_array=pursuers_array, game_counter=game_counter, HumanRender=HumanRender)
 
-def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_array=[], game_counter=0):
+def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_array=[], game_counter=0, HumanRender=False):
     total_data = []
     for evaders in evaders_array:
         num_evaders = evaders
@@ -171,8 +171,10 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
 
                 pursuer_speed = 1.5
                 evader_speed = 2.5 
-
-                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
+                if HumanRender == True:
+                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
+                else:
+                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True)
                 observations, infos = env.reset(seed=seed)
 
                 assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
@@ -262,4 +264,3 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
     df.to_csv('simulation_data_with_features_many_vs_many.csv', index=False)
     print("Data saved to simulation_data_with_features.csv")
 
-run_many_vs_many()

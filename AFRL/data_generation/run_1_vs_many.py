@@ -4,36 +4,40 @@ import numpy as np
 import pandas as pd
 import random
 
-def initialize_speeds():
-    global pursuer_speed, evader_speed
-    
-    pursuer_speed = 1.5  #just do constant speed for all pursuers following the paper
-    evader_speed = np.random.uniform(2.2, 3.2)
-'''
-HYPER Parameter Initialization
-'''
-pursuer_speed = 0
-evader_speed = 0
-game_counter = 0
-def run_1_vs_many(game_counter=game_counter):
-   
+
+def run_1_vs_many(HumanRender=False):
+    def initialize_speeds(pursuer_speed, evader_speed):
+        
+        
+        pursuer_speed = 1.5  #just do constant speed for all pursuers following the paper
+        evader_speed = np.random.uniform(2.2, 3.2)
+        return pursuer_speed, evader_speed
+    '''
+    HYPER Parameter Initialization
+    '''
+    pursuer_speed = 0
+    evader_speed = 0
+    game_counter = 0
     round_counter = 0
     speed_ratio = None
     num_active_pursuers = 1
     num_evaders = 1
     total_data = []
     #number of pursuers array: [1, 2, 3, 4, 5]
-    pursuers_array = [1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    pursuers_array = [1, 2, 3] #[1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
     for pursuit in pursuers_array:
         num_total_pursuers = pursuit
         num_non_active_pursuers = num_total_pursuers - num_active_pursuers
-        initialize_speeds()
+        pursuer_speed, evader_speed = initialize_speeds(pursuer_speed, evader_speed)
 
         for i in range(1, 2): 
             game_counter += 1
             seed = random.randint(1, 10000)
             #render_mode='human' for visualization
-            env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True)
+            if HumanRender:
+                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True, render_mode='human')
+            else:
+                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True)
             observations, infos = env.reset(seed=seed)
 
             agent_types = initialize_agent_types(observations, num_active_pursuers)
@@ -129,5 +133,3 @@ def run_1_vs_many(game_counter=game_counter):
 
     print("Data saved to simulation_data_with_features.csv")
 
-
-run_1_vs_many()
