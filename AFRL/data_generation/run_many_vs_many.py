@@ -23,8 +23,13 @@ def calculate_apollonius_circle(position1, position2, speed_ratio):
     circle_position = position1 + (radius * np.array([delta_x, delta_y]) / distance)
     return circle_position
 
-# Update positions based on velocity and heading
-
+#Update positions based on velocity and heading
+'''
+positions: list of positions of agents
+velocities: list of velocities of agents
+headings: list of headings of agents
+delta_t: time step
+'''
 def update_positions(positions, velocities, headings, delta_t):
     new_positions = []
     for pos, vel, heading in zip(positions, velocities, headings):
