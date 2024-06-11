@@ -3,7 +3,7 @@ from pettingzoo.mpe import simple_tag_v3
 import pandas as pd
 import random
 
-#Compute the angle between two points in radians
+# Compute the angle between two points in radians
 def calculate_angle(position1, position2):
     delta_x = position2[0] - position1[0]
     delta_y = position2[1] - position1[1]
@@ -11,7 +11,6 @@ def calculate_angle(position1, position2):
     return angle
 
 # Calculate the Apollonius circle for the interception point
-# Apple! 
 def calculate_apollonius_circle(position1, position2, speed_ratio):
     delta_x = position2[0] - position1[0]
     delta_y = position2[1] - position1[1]
@@ -23,13 +22,7 @@ def calculate_apollonius_circle(position1, position2, speed_ratio):
     circle_position = position1 + (radius * np.array([delta_x, delta_y]) / distance)
     return circle_position
 
-#Update positions based on velocity and heading
-'''
-positions: list of positions of agents
-velocities: list of velocities of agents
-headings: list of headings of agents
-delta_t: time step
-'''
+# Update positions based on velocity and heading
 def update_positions(positions, velocities, headings, delta_t):
     new_positions = []
     for pos, vel, heading in zip(positions, velocities, headings):
@@ -49,9 +42,17 @@ def initialize_agent_types(observations, num_pursuers, num_evaders):
             distance = np.linalg.norm(pursuer_position - evader_position)
             distances_to_evaders.append((pursuer, evader, distance))
     distances_to_evaders.sort(key=lambda x: x[2])
+    assigned_evaders = set()
     for pursuer, evader, _ in distances_to_evaders:
-        if evader not in assignments.values():
+        if evader not in assigned_evaders:
             assignments[pursuer] = evader
+            assigned_evaders.add(evader)
+    # Ensure all pursuers have an assignment
+    all_pursuers = [agent for agent in observations if 'adversary' in agent]
+    unassigned_pursuers = [pursuer for pursuer in all_pursuers if pursuer not in assignments]
+    for pursuer in unassigned_pursuers:
+        assigned_evader = random.choice(list(assignments.values()))
+        assignments[pursuer] = assigned_evader
     return assignments
 
 # Extract features at each time step for each agent
@@ -85,24 +86,23 @@ def cooperative_strategy_continuous(features, evader_position, speed, speed_rati
     action = heading_to_continuous_action(optimal_heading, max_speed=speed)
     return action
 
-'''
-We need to convert the heading to a continuous action that can be used in the environment
-'''
 def heading_to_continuous_action(heading, max_speed):
     speed = max_speed
     action_x = np.clip(speed * np.cos(heading), -1.0, 1.0)
     action_y = np.clip(speed * np.sin(heading), -1.0, 1.0)
     action = np.array([0.0, action_x, action_y, 0.0, 0.0])
-    return np.nan_to_num(action)  # Non NANS!
+    return np.nan_to_num(action)
 
 # Calculate optimal evader heading to escape from pursuers
 def optimal_evader_heading(features_e, pursuer_positions, evader_speed=1.5):
+    if len(pursuer_positions) == 0:
+        return np.array([0.0, 0.0, 0.0, 0.0, 0.0])
     escape_angles = [calculate_angle(features_e['self_pos'], p_pos) for p_pos in pursuer_positions]
     optimal_heading = np.mean(escape_angles) + np.pi  # Escape in the opposite direction
     action_x = evader_speed * np.cos(optimal_heading)
     action_y = evader_speed * np.sin(optimal_heading)
     action = np.clip([0.0, action_x, action_y, 0.0, 0.0], -1.0, 1.0)
-    return np.nan_to_num(action)  #NO NAN VALUES
+    return np.nan_to_num(action)
 
 def main_loop():
     for i in range(1, 6):
@@ -118,6 +118,10 @@ def main_loop():
         observations, infos = env.reset(seed=seed)
 
         assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
+        
+        # Debugging: print assignments
+        print("Assignments:", assignments)
+        
         round_counter = 0
 
         while env.agents:
@@ -128,8 +132,12 @@ def main_loop():
             for agent in env.agents:
                 features = all_features[agent]
                 if 'adversary' in agent:
-                    evader_position = observations[assignments[agent]][2:4]
-                    action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
+                    if agent in assignments:
+                        evader_position = observations[assignments[agent]][2:4]
+                        action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
+                    else:
+                        print(f"Error: {agent} has no assigned evader.")
+                        continue
                 else:
                     pursuer_positions = [observations[p][2:4] for p in assignments if assignments[p] == agent]
                     action = optimal_evader_heading(features, pursuer_positions, evader_speed)
