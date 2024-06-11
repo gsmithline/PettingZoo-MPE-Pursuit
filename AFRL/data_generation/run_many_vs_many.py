@@ -15,7 +15,7 @@ def calculate_angle(position1, position2):
 def initialize_value_function(positions):
     value_function = {}
     for pos in positions:
-        value_function[tuple(pos)] = 0  
+        value_function[tuple(pos)] = 0  # Initial value can be zero or some function of the position
     return value_function
 
 # Compute the Hamiltonian
@@ -39,7 +39,7 @@ def update_control_laws(pursuer_pos, evader_pos, co_states):
 # Update the Value Function
 def update_value_function(value_function, positions, control_laws):
     for pos in positions:
-        value_function[tuple(pos)] = max(control_laws) - min(control_laws)  # Simplified update
+        value_function[tuple(pos)] = max(control_laws) - min(control_laws) 
     return value_function
 
 # Calculate the Apollonius circle for the interception point
@@ -49,7 +49,7 @@ def calculate_apollonius_circle(position1, position2, speed_ratio):
     distance = np.sqrt(delta_x**2 + delta_y**2)
     value_inside_sqrt = 1 - speed_ratio**2
     if value_inside_sqrt <= 0:
-        value_inside_sqrt = 1e-6  # Small positive value to prevent division by zero or negative values
+        value_inside_sqrt = 1e-6  # Small positive value to
     radius = (distance * speed_ratio) / np.sqrt(value_inside_sqrt)
     circle_position = position1 + (radius * np.array([delta_x, delta_y]) / distance)
     return circle_position
@@ -136,6 +136,22 @@ def optimal_evader_heading(features_e, pursuer_positions, evader_speed=1.5):
     action = np.clip([0.0, action_x, action_y, 0.0, 0.0], -1.0, 1.0)
     return np.nan_to_num(action)
 
+# Compute co-state variables based on the gradient of the value function
+def compute_co_states(value_function, position):
+    epsilon = 1e-5  # Small perturbation for numerical differentiation
+    co_states = np.zeros(4)
+    pos_array = np.array(position)
+
+    for i in range(2):
+        pos_array[i] += epsilon
+        value_plus = value_function.get(tuple(pos_array), 0)
+        pos_array[i] -= 2 * epsilon
+        value_minus = value_function.get(tuple(pos_array), 0)
+        pos_array[i] += epsilon
+        co_states[i] = (value_plus - value_minus) / (2 * epsilon)
+
+    return co_states
+
 def main_loop():
     for i in range(1, 6):
         seed = random.randint(1, 10000)
@@ -143,7 +159,7 @@ def main_loop():
         pursuer_speed = 1.5
         evader_speed = 2.5
         num_total_pursuers = 5
-        num_evaders = 5  # Adjust based on your scenario
+        num_evaders = 5  # works when pursuers = evaders 
         total_data = []
 
         env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
@@ -196,24 +212,24 @@ def main_loop():
                     'angles_to_agents': features['angles_to_agents'],
                     'distances_to_landmarks': features['distances_to_landmarks'],
                     'angles_to_landmarks': features['angles_to_landmarks'],
-                    'other_agent_velocities': features['other_agent_velocities'].tolist(), 
-                    'value_function': None,
+                    'other_agent_velocities': features['other_agent_velocities'].tolist(),
+                    'value_function': value_function,
                     'interception_point': None
+
                 })
 
             for pos in initial_positions:
-                # Compute Hamiltonian for each position
-                co_states = np.random.rand(4)  # Placeholder co-states 
+                co_states = compute_co_states(value_function, pos)  
                 H = compute_hamiltonian(pos, evader_position, pursuer_speed, evader_speed, co_states)
                 
-                # Update Control Laws based on Hamiltonian
+                #update control laws 
                 pursuer_heading, evader_heading = update_control_laws(pos, evader_position, co_states)
                 
-                # Update Value Function
+                #update value functions
                 control_laws = [pursuer_heading, evader_heading]  # Simplified control laws list
                 value_function = update_value_function(value_function, initial_positions, control_laws)
                 
-                # Compute Interception Points
+                #get interaction points 
                 interception_point = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
 
             observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -222,9 +238,8 @@ def main_loop():
                 total_data[-1]['reward'] = rewards[agent]
                 total_data[-1]['termination'] = terminations[agent]
                 total_data[-1]['truncation'] = truncations[agent]
-                if 'adversary' in agent:
-                    total_data[-1]['interception_point'] = interception_point
-                    total_data[-1]['value_function'] = value_function[tuple(pos)].tolist()
+                total_data[-1]['interception_point'] = interception_point
+                total_data[-1]['value_function'] = value_function
 
             env.render()
 
