@@ -49,7 +49,7 @@ def run_1_vs_many(HumanRender=False):
                 round_counter += 1
 
                 actions = {}
-                all_features = {agent: extract_features(observations[agent], agent, agent_types.get(agent, 'evader'), num_total_pursuers, 0, num_evaders) for agent in env.agents}
+                all_features = {agent: extract_features(observations[agent], agent, observations, agent_types.get(agent, 'evader'), num_total_pursuers, 0, num_evaders) for agent in env.agents}
                 agent_types = update_agent_types(agent_types, list(all_features.values()), num_active_pursuers)
 
                 non_active_counter = 0 
@@ -94,10 +94,15 @@ def run_1_vs_many(HumanRender=False):
                         'self_vel': features['self_vel'].tolist(),
                         'self_pos': features['self_pos'].tolist(),
                         'distances_to_agents': features['distances_to_agents'],
-                        'angles_to_agents': features['angles_to_agents'],
+                        'distance_to_evader': features['distance_to_evader'],
+                        'distance_to_pursuers': features['distance_to_pursuers'],
+                        'angle_to_evader': features['angle_to_evader'],
+                        'angle_to_pursuers': features['angle_to_pursuers'],
+                        'evader_velocity': features['evader_velocity'],
+                        'pursuers_velocities': features['pursuers_velocities'], 
                         'distances_to_landmarks': features['distances_to_landmarks'],
                         'angles_to_landmarks': features['angles_to_landmarks'],
-                        'other_agent_velocities': features['other_agent_velocities'].tolist()
+                        'is_evader_captured': features['is_evader_captured']
                     })
 
                 #pull positins for pursuers and evader for headings and updates
