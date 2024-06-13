@@ -201,8 +201,8 @@ def run_many_vs_many(HumanRender=False):
     pursuer_speed = 1.5
     evader_speed = 2.5
     game_counter = 0
-    pursuers_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
-    evaders_array = [2, 3] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    pursuers_array = [5] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    evaders_array = [5] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
     main_loop(pursuer_speed=pursuer_speed, evader_speed=evader_speed, evaders_array=evaders_array, pursuers_array=pursuers_array, game_counter=game_counter, HumanRender=HumanRender)
 
 def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_array=[], game_counter=0, HumanRender=False):
@@ -212,7 +212,7 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
         for pursuer in pursuers_array:
             num_total_pursuers = pursuer
             game_counter += 1
-            for i in range(1, 2):
+            for i in range(1, 10):
                 seed = random.randint(1, 10000)
 
                 if HumanRender:
@@ -304,8 +304,6 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
                         interception_point, radius = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
                         
                         
-                        if 'adversary' in agent: 
-                            evader_captured = capture_evader(features['distances_to_evaders'], radius)
 
 
                     observations, rewards, terminations, truncations, infos = env.step(actions)
@@ -323,10 +321,7 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
 
     # Save data to dataframe 
     df = pd.DataFrame(total_data)
-    df.to_csv('simulation_data_with_features_many_vs_many.csv', index=False)
+    df.to_csv('simulation_data_with_features_5_vs_5.csv', index=False)
     print("Data saved to simulation_data_with_features_many_vs_many.csv")
 
-    # Save data to dataframe 
-    df = pd.DataFrame(total_data)
-    df.to_csv('simulation_data_with_features_many_vs_many.csv', index=False)
-    print("Data saved to simulation_data_with_features.csv")
+  

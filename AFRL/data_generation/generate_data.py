@@ -10,7 +10,7 @@ def main():
     print("DONE RUNNING 1 EVADER VS MANY PURSUERS SIMULATIONS")
     print("==============================================")
     print("RUNNING MANY PURSUERS VS MANY EVADERS SIMULATIONS")
-    run_many_vs_many(False) #SET HUMAN RENDER MODE TO TRUE to VISUALIZE 
+    run_many_vs_many(True) #SET HUMAN RENDER MODE TO TRUE to VISUALIZE 
     print("==============================================")
     print("DONE RUNNING MANY PURSUERS VS MANY EVADERS SIMULATIONS")
 

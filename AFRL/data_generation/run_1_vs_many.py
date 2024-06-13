@@ -24,13 +24,14 @@ def run_1_vs_many(HumanRender=False):
     num_evaders = 1
     total_data = []
     #number of pursuers array: [1, 2, 3, 4, 5]
-    pursuers_array = [1, 2, 3] #[1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    pursuers_array = [5] #[1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
     for pursuit in pursuers_array:
         num_total_pursuers = pursuit
         num_non_active_pursuers = num_total_pursuers - num_active_pursuers
         pursuer_speed, evader_speed = initialize_speeds(pursuer_speed, evader_speed)
+        #evader_speed = 2.5
 
-        for i in range(1, 2): 
+        for i in range(1, 5): 
             game_counter += 1
             seed = random.randint(1, 10000)
             #render_mode='human' for visualization
@@ -86,13 +87,13 @@ def run_1_vs_many(HumanRender=False):
                         'seed': seed,
                         'agent': agent,
                         'agent_type': agent_type,
-                        'observation': observations[agent].tolist(),
+                        'observation': observations[agent],
                         'action': action.tolist(),
                         'reward': None,
                         'termination': None,
                         'truncation': None,
-                        'self_vel': features['self_vel'].tolist(),
-                        'self_pos': features['self_pos'].tolist(),
+                        'self_vel': features['self_vel'],
+                        'self_pos': features['self_pos'],
                         'distances_to_agents': features['distances_to_agents'],
                         'distance_to_evader': features['distance_to_evader'],
                         'distance_to_pursuers': features['distance_to_pursuers'],
@@ -134,7 +135,7 @@ def run_1_vs_many(HumanRender=False):
             env.close()
 
     df = pd.DataFrame(total_data)
-    df.to_csv('simulation_data_with_features_1_vs_many.csv', index=False)
+    df.to_csv('simulation_data_with_features_1_vs_2.csv', index=False)
 
     print("Data saved to simulation_data_with_features.csv")
 

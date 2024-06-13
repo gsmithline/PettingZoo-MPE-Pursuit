@@ -137,6 +137,21 @@ def extract_features(observation, agent_name, all_observations, agent_type, num_
                 captured.append(True)
             else:
                 captured.append(False)
+    #convert all numpy arrays to lists
+    self_vel = self_vel.tolist()
+    self_pos = self_pos.tolist()
+    distances_to_agents = distances_to_agents
+    distance_to_evader = distance_to_evader
+    distance_to_pursuers = distance_to_pursuers
+    angle_to_evader = angle_to_evader
+    angle_to_pursuers = angle_to_pursuers
+    evader_velocity = evader_velocity
+    pursuers_velocities = pursuers_velocities
+    distances_to_landmarks = distances_to_landmarks
+    angles_to_landmarks = angles_to_landmarks
+    agent_type = agent_type
+    agent_name = agent_name
+    captured = captured
     features = {
         'self_vel': self_vel,
         'self_pos': self_pos,
