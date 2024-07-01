@@ -42,6 +42,7 @@ class SimpleEnv(AECEnv):
         render_mode=None,
         continuous_actions=False,
         local_ratio=None,
+        pursuer_positions = None
     ):
         super().__init__()
 

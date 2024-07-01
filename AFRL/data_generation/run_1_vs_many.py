@@ -1,14 +1,14 @@
 from pursuit_evasion_1_vs_many import extract_features, cooperative_strategy_continuous, evader_strategy, update_agent_types, initialize_agent_types, update_positions, calculate_angle
+from pettingzoo.mpe import simple_tag_v2
 from pettingzoo.mpe import simple_tag_v3
+
 import numpy as np
 import pandas as pd
 import random
 
 
-def run_1_vs_many(HumanRender=False):
+def run_1_vs_many(HumanRender=False, pursuer_pos=[[0.1, 0.1],  [-0.1, 0.1]]):
     def initialize_speeds(pursuer_speed, evader_speed):
-        
-        
         pursuer_speed = 1.5  #just do constant speed for all pursuers following the paper
         evader_speed = np.random.uniform(2.2, 3.2)
         return pursuer_speed, evader_speed
@@ -24,27 +24,44 @@ def run_1_vs_many(HumanRender=False):
     num_evaders = 1
     total_data = []
     #number of pursuers array: [1, 2, 3, 4, 5]
-    pursuers_array = [5] #[1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    pursuers_array = [2, 3, 4, 5] #[1, 2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
     for pursuit in pursuers_array:
         num_total_pursuers = pursuit
         num_non_active_pursuers = num_total_pursuers - num_active_pursuers
         pursuer_speed, evader_speed = initialize_speeds(pursuer_speed, evader_speed)
         #evader_speed = 2.5
-
-        for i in range(1, 5): 
+        for i in range(1, 11): 
             game_counter += 1
             seed = random.randint(1, 10000)
             #render_mode='human' for visualization
             if HumanRender:
-                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True, render_mode='human')
+                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=15, continuous_actions=True, render_mode='human')
             else:
-                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=30, continuous_actions=True)
+                env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=15, 
+                                                 continuous_actions=True)
+                
+            
             observations, infos = env.reset(seed=seed)
+            # Manually set the initial positions of the adversary agents
+            raw_env = env.unwrapped
+            for idx, agent in enumerate(raw_env.world.agents):
+                if agent.adversary and idx < len(pursuer_pos):
+                    agent.state.p_pos = np.array(pursuer_pos[idx])
+                    #agent.state.p_vel = np.zeros(raw_env.world.dim_p)
+                    observations[agent.name][2:4] = pursuer_pos[idx] 
+
+           
+
+
+            
 
             agent_types = initialize_agent_types(observations, num_active_pursuers)
 
             speed_ratio = pursuer_speed / evader_speed
             round_counter = 0
+
+            #initial visualization
+            env.render()
 
             while env.agents:
                 round_counter += 1
@@ -134,8 +151,8 @@ def run_1_vs_many(HumanRender=False):
 
             env.close()
 
-    df = pd.DataFrame(total_data)
-    df.to_csv('simulation_data_with_features_1_vs_2.csv', index=False)
+        #df = pd.DataFrame(total_data)
+        #df.to_csv(f'simulation_data_with_features_1_vs_{pursuit}.csv', index=False)
 
-    print("Data saved to simulation_data_with_features.csv")
+        #print("Data saved to simulation_data_with_features.csv")
 

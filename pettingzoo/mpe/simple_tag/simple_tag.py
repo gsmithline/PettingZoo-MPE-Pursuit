@@ -72,6 +72,8 @@ from pettingzoo.utils.conversions import parallel_wrapper_fn
 
 
 class raw_env(SimpleEnv, EzPickle):
+        
+
     def __init__(
         self,
         num_good=1,
@@ -79,7 +81,8 @@ class raw_env(SimpleEnv, EzPickle):
         num_obstacles=2,
         max_cycles=25,
         continuous_actions=False,
-        render_mode=None,
+        render_mode=None
+
     ):
         EzPickle.__init__(
             self,
@@ -88,21 +91,28 @@ class raw_env(SimpleEnv, EzPickle):
             num_obstacles=num_obstacles,
             max_cycles=max_cycles,
             continuous_actions=continuous_actions,
-            render_mode=render_mode,
+            render_mode=render_mode
+           
         )
         scenario = Scenario()
         world = scenario.make_world(num_good, num_adversaries, num_obstacles)
+
+
         SimpleEnv.__init__(
             self,
             scenario=scenario,
             world=world,
             render_mode=render_mode,
             max_cycles=max_cycles,
-            continuous_actions=continuous_actions,
+            continuous_actions=continuous_actions
+
+            
         )
         self.metadata["name"] = "simple_tag_v3"
+        self.scenario = scenario
 
 
+    
 env = make_env(raw_env)
 parallel_env = parallel_wrapper_fn(env)
 
@@ -126,8 +136,8 @@ class Scenario(BaseScenario):
             agent.collide = True
             agent.silent = True
             agent.size = 0.075 if agent.adversary else 0.05
-            agent.accel = 3.0 if agent.adversary else 4.0
-            agent.max_speed = 1.0 if agent.adversary else 1.3
+            agent.accel = 5 if agent.adversary else 4 #CHANGE ME SO ADVERSARY IS SLOWER
+            agent.max_speed = 2.5 if agent.adversary else 1.5 #CHANGE ME SO ADVERSARY IS SLOWER
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
@@ -151,7 +161,8 @@ class Scenario(BaseScenario):
             landmark.color = np.array([0.25, 0.25, 0.25])
         # set random initial states
         for agent in world.agents:
-            agent.state.p_pos = np_random.uniform(-1, +1, world.dim_p)
+            agent.state.p_pos = np_random.uniform(-1, +1, world.dim_p) #change these on reset
+
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
         for i, landmark in enumerate(world.landmarks):

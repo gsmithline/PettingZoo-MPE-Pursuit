@@ -34,8 +34,7 @@ def calculate_angle(position1, position2):
     delta_y = position2[1] - position1[1]
     angle = np.arctan2(delta_y, delta_x)
     return angle
-# This calculates the cartesian oval for the pursuers
-#THIS IS CO FROM THE PAPER
+#This calculates the cartesian oval for the pursuers
 def calculate_cartesian_oval(position1, position2, capture_radius, speed_ratio):
     delta_x = position2[0] - position1[0]
     delta_y = position2[1] - position1[1]
@@ -58,6 +57,7 @@ def update_positions(positions, velocities, headings, delta_t):
     return new_positions
 
 #creates agents and does the initial classification of agents
+
 def initialize_agent_types(observations, num_active_pursuers):
     distances_to_evader = [] 
     evader_position = observations['agent_0'][2:4]  # get evader position
@@ -78,7 +78,6 @@ def initialize_agent_types(observations, num_active_pursuers):
     return agent_types
 
 #This updates the agent types based on the distance to the evader
-#TODO: update for more evaders, say ensure the closest pursuer to each evader is active
 def update_agent_types(agent_types, all_features, num_active=2):
     distances_to_evader = []
     for features in all_features:
@@ -99,7 +98,7 @@ import numpy as np
 
 
 import numpy as np
-
+#This extracts features for measurement 
 def extract_features(observation, agent_name, all_observations, agent_type, num_pursuers, num_landmarks, num_evaders):
     self_vel = observation[:2]
     self_pos = observation[2:4] # position of the agent
@@ -113,7 +112,6 @@ def extract_features(observation, agent_name, all_observations, agent_type, num_
     angles_to_agents = [calculate_angle(self_pos, self_pos + other_agent_rel_positions[2*i:2*i+2]) for i in range(num_agents)]
     distances_to_landmarks = [np.linalg.norm(landmark_rel_positions[2*i:2*i+2]) for i in range(num_landmarks)]
     angles_to_landmarks = [calculate_angle(self_pos, self_pos + landmark_rel_positions[2*i:2*i+2]) for i in range(num_landmarks)]
-    #ADD METHOD FOR CAPTURING EVADER
     distance_to_evader = []
     distance_to_pursuers = []
     angle_to_evader = []
@@ -129,6 +127,7 @@ def extract_features(observation, agent_name, all_observations, agent_type, num_
             distance_to_pursuers.append(np.linalg.norm(obs[2:4] - self_pos))
             angle_to_pursuers.append(calculate_angle(self_pos, obs[2:4]))
             pursuers_velocities.append(obs[:2])
+
     captured = []
     if "adversary" in agent_name:
         distance_to_evader = distance_to_evader[0]
@@ -171,42 +170,7 @@ def extract_features(observation, agent_name, all_observations, agent_type, num_
     
     return features
 
-'''
-
 #This runs the containment strategy for pursuers 
-def cooperative_strategy_continuous(features, agent_type, other_agent_features, evader_position, agent_index, total_non_active, speed, speed_ratio=2.5):
-    if agent_type == 'active':
-        target_position = calculate_cartesian_oval(features['self_pos'], evader_position, capture_radius=2.0, speed_ratio=speed_ratio)
-        optimal_heading = calculate_angle(features['self_pos'], target_position)
-        action = heading_to_continuous_action(optimal_heading, max_speed=speed)
-    elif agent_type == 'non-active':
-        strategic_position = calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active)
-        optimal_heading = calculate_angle(features['self_pos'], strategic_position)
-        action = heading_to_continuous_action(optimal_heading, max_speed=speed)
-    else:
-        action = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
-    return action
-'''
-'''
-def cooperative_strategy_continuous(features, agent_type, other_agent_features, evader_position, agent_index, total_non_active, speed, speed_ratio=2.5):
-    active_pursuer_positions = [f['self_pos'] for f in other_agent_features if f['agent_type'] == 'active']
-    
-    if agent_type == 'active':
-        weakest_link, min_theta = calculate_weakest_link(active_pursuer_positions, evader_position, capture_radius=2.0, speed_ratio=speed_ratio)
-        if weakest_link:
-            target_position = calculate_cartesian_oval(features['self_pos'], evader_position, capture_radius=2.0, speed_ratio=speed_ratio)
-            optimal_heading = calculate_angle(features['self_pos'], target_position)
-        else:
-            optimal_heading = calculate_angle(features['self_pos'], evader_position)
-        action = heading_to_continuous_action(optimal_heading, max_speed=speed)
-    elif agent_type == 'non-active':
-        strategic_position = calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active)
-        optimal_heading = calculate_angle(features['self_pos'], strategic_position)
-        action = heading_to_continuous_action(optimal_heading, max_speed=speed)
-    else:
-        action = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
-    return action
-'''
 def cooperative_strategy_continuous(features, agent_type, other_agent_features, evader_position, agent_index, total_non_active, speed, speed_ratio=2.5):
     all_pursuer_positions = [f['self_pos'] for f in other_agent_features if 'adversary' in f['agent_name']]
 
@@ -262,21 +226,6 @@ def heading_to_continuous_action(heading, max_speed):
 
 #calculare weakest link between two pursuers
 #key for the evader to escape and active pursuers to protect 
-'''
-def calculate_weakest_link(active_pursuers_positions, evader_position, capture_radius, speed_ratio):
-    min_theta = float('inf')
-    weakest_link = None
-    
-    for i, pos_i in enumerate(active_pursuers_positions):
-        for j, pos_j in enumerate(active_pursuers_positions):
-            if i != j:
-                theta_ij = calculate_overlapping_angle(pos_i, pos_j, evader_position, capture_radius, speed_ratio)
-                if theta_ij < min_theta:
-                    min_theta = theta_ij
-                    weakest_link = (pos_i, pos_j)
-    
-    return weakest_link, min_theta
-'''
 def calculate_weakest_link(all_pursuers_positions, evader_position, capture_radius, speed_ratio):
     min_theta = float('inf')
     weakest_link = None
@@ -293,40 +242,7 @@ def calculate_weakest_link(all_pursuers_positions, evader_position, capture_radi
 
 
 #This calculates the strategic position for non-active pursuers
-'''
-def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
-    angle_increment = 2 * np.pi / total_non_active
-    angle_offset = agent_index * angle_increment
-    x_offset = radius * np.cos(angle_offset)
-    y_offset = radius * np.sin(angle_offset)
-    strategic_position = evader_position + np.array([x_offset, y_offset])
-    print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
-    return strategic_position
-'''
 #calculate the strategic position for non-active pursuers
-'''
-def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
-    active_pursuer_positions = [f['self_pos'] for f in other_agent_features if f['agent_type'] == 'active']
-
-    if len(active_pursuer_positions) < 1: # no active pursuers
-        angle_increment = 2 * np.pi / total_non_active
-        angle_offset = agent_index * angle_increment
-        x_offset = radius * np.cos(angle_offset)
-        y_offset = radius * np.sin(angle_offset)
-        strategic_position = evader_position + np.array([x_offset, y_offset])
-    else:
-        # Find the closest active pursuer
-        closest_active_pursuer = min(active_pursuer_positions, key=lambda pos: np.linalg.norm(features['self_pos'] - pos))
-        # Calculate position to support the closest active pursuer
-        angle_to_evader = calculate_angle(closest_active_pursuer, evader_position)
-        support_angle = angle_to_evader + (agent_index * np.pi / total_non_active)
-        x_offset = radius * np.cos(support_angle)
-        y_offset = radius * np.sin(support_angle)
-        strategic_position = closest_active_pursuer + np.array([x_offset, y_offset])
-
-    print(f"Non-active pursuer {agent_index} moving to {strategic_position}")
-    return strategic_position
-'''
 def calculate_non_active_position(features, other_agent_features, evader_position, agent_index, total_non_active, radius=2.0):
     active_pursuer_positions = [f['self_pos'] for f in other_agent_features if f['agent_type'] == 'active']
     num_active_pursuers = len(active_pursuer_positions)
@@ -448,36 +364,6 @@ def calculate_overlapping_angle(pos_i, pos_j, evader_position, capture_radius, s
     lambda_j = calculate_angle(pos_j, evader_position)
     theta_ij = phi_i + phi_j - (lambda_i - lambda_j)
     return theta_ij
-
-'''
-def optimal_evader_heading(features_e, features_i, features_j, evader_speed=2.5):
-    di = features_i['distances_to_agents'][0]
-    dj = features_j['distances_to_agents'][0]
-    lambda_i = calculate_angle(features_i['self_pos'], features_i['self_pos'] + np.array([di, 0]))
-    lambda_j = calculate_angle(features_j['self_pos'], features_j['self_pos'] + np.array([dj, 0]))
-
-    try:
-        if di > 0 and dj > 0: 
-            Psi_Es = (1 / abs(dj) * (np.cos(lambda_j) - np.sin(lambda_j) / np.sqrt(max(dj ** 2 - 2, 1e-6)))) - \
-                     (1 / abs(di) * (np.cos(lambda_i) + np.sin(lambda_i) / np.sqrt(max(di ** 2 - 2, 1e-6))))
-            Psi_Ec = (1 / abs(di) * (np.sin(lambda_i) - np.cos(lambda_i) / np.sqrt(max(di ** 2 - 2, 1e-6)))) - \
-                     (1 / abs(dj) * (np.sin(lambda_j) + np.cos(lambda_j) / np.sqrt(max(dj ** 2 - 2, 1e-6))))
-        
-            sin_psi_E = Psi_Es / np.sqrt(Psi_Es ** 2 + Psi_Ec ** 2)
-            cos_psi_E = Psi_Ec / np.sqrt(Psi_Es ** 2 + Psi_Ec ** 2)
-
-            action_x = np.clip(0.5 * (evader_speed * cos_psi_E + 1.0), 0.0, 1.0)
-            action_y = np.clip(0.5 * (evader_speed * sin_psi_E + 1.0), 0.0, 1.0)
-            print(f"Evader optimal heading calculated with action_x: {action_x}, action_y: {action_y}")
-        else:
-            action_x, action_y = 0.5, 0.5
-            print("di or dj is zero or negative, defaulting action_x and action_y to 0.5")
-    except (ValueError, ZeroDivisionError):
-        action_x, action_y = 0.5, 0.5
-        print("Exception encountered, defaulting action_x and action_y to 0.5")
-
-    return np.array([0.0, action_x, action_y, 0.0, 0.0])
-'''
 
 def optimal_evader_heading(features_e, features_i, features_j, evader_speed=2.5):
     di = features_i['distances_to_agents'][0]

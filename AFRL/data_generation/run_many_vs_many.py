@@ -4,7 +4,7 @@ import pandas as pd
 import random
 from scipy.optimize import minimize
 
-# Compute the angle between two points in radians
+#compute angle in radiands
 def calculate_angle(position1, position2):
     delta_x = position2[0] - position1[0]
     delta_y = position2[1] - position1[1]
@@ -18,13 +18,13 @@ def initialize_value_function(positions):
         value_function[tuple(pos)] = 0 
     return value_function
 
-# Compute the Hamiltonian
+#compute the hamiltonian
 def compute_hamiltonian(pursuer_pos, evader_pos, pursuer_vel, evader_vel, co_states):
     H = pursuer_vel * (co_states[0] * np.cos(pursuer_pos[2]) + co_states[1] * np.sin(pursuer_pos[2])) + \
         evader_vel * (co_states[2] * np.cos(evader_pos[2]) + co_states[3] * np.sin(evader_pos[2]))
     return H
 
-# Update Control Laws using a numerical solver
+#update control laws numerically
 def update_control_laws(pursuer_pos, evader_pos, co_states):
     def pursuer_control(heading):
         return -np.dot(co_states[:2], np.array([np.cos(heading), np.sin(heading)]))
@@ -49,7 +49,7 @@ def calculate_apollonius_circle(position1, position2, speed_ratio):
     distance = np.sqrt(delta_x**2 + delta_y**2)
     value_inside_sqrt = 1 - speed_ratio**2
     if value_inside_sqrt <= 0:
-        value_inside_sqrt = 1e-6  # Small positive value to
+        value_inside_sqrt = 1e-6  # Small positive value to make we dont divide by zero
     radius = (distance * speed_ratio) / np.sqrt(value_inside_sqrt)
     circle_position = position1 + (radius * np.array([delta_x, delta_y]) / distance)
     return circle_position, radius
@@ -99,7 +99,8 @@ def extract_features(observation, agent_name, all_observations, num_pursuers, nu
     angles_to_agents = [calculate_angle(self_pos, self_pos + other_agent_rel_positions[2*i:2*i+2]) for i in range(num_agents)]
     distances_to_landmarks = [np.linalg.norm(landmark_rel_positions[2*i:2*i+2]) for i in range(num_landmarks)]
     angles_to_landmarks = [calculate_angle(self_pos, self_pos + landmark_rel_positions[2*i:2*i+2]) for i in range(num_landmarks)]
-
+    self_pos.tolist()
+    self_vel.tolist()
     #capture evader
     distances_to_evaders = []
     distances_to_pursuers = []
@@ -117,6 +118,8 @@ def extract_features(observation, agent_name, all_observations, num_pursuers, nu
             angles_to_pursuers.append(calculate_angle(self_pos, obs[2:4]))
             pursuers_velocities.append(obs[:2])
     captured = []
+    intercept_point = None,
+    radius = None
     if 'adversary' in agent_name:
         #get radius of capture
         distances_to_evaders = distances_to_evaders.copy() 
@@ -127,9 +130,8 @@ def extract_features(observation, agent_name, all_observations, num_pursuers, nu
                 evader_position = obs[2:4]
                 agent_name_index = int(agent.split('_')[1])
                 intercept_point, radius = calculate_apollonius_circle(self_pos, evader_position, speed_ratio= 1.5 / 2.5)
-
                 captured.append(capture_evader(distances_to_evaders[agent_name_index], radius))
-        
+    
     else:
         is_evader_captured = None
     
@@ -147,7 +149,8 @@ def extract_features(observation, agent_name, all_observations, num_pursuers, nu
         'agent_name': agent_name, #string name of agent
         'distances_to_evaders': distances_to_evaders, #array of distances to evaders ex. [adversary_0, adversary_1, ...] -> [0.1, 0.2, ...], NOTE: self is left out if they are a pursuer
         'distances_to_pursuers': distances_to_pursuers, #array of distances to pursuers ex. [agent_0, agent_1, ...] -> [0.1, 0.2, ...]
-        'is_evader_captured': captured #array of booleans in order of evaders ex. [agent_0, agent_1, ...] -> [True, False, ...] indicating capture
+        'is_evader_captured': captured, #array of booleans in order of evaders ex. [agent_0, agent_1, ...] -> [True, False, ...] indicating capture
+        'radius': radius #radius of capture, NONE IF EVADER 
     }
     return features
 
@@ -184,8 +187,8 @@ def optimal_evader_heading(features_e, pursuer_positions, evader_speed=1.5):
 
 # Compute co-state variables based on the gradient of the value function
 def compute_co_states(value_function, position):
-    epsilon = 1e-5  # Small perturbation for numerical differentiation
-    co_states = np.zeros(4)
+    epsilon = 1e-5  
+    co_states = np.zeros(4) #initial costate variables
     pos_array = np.array(position)
 
     for i in range(2):
@@ -201,8 +204,8 @@ def run_many_vs_many(HumanRender=False):
     pursuer_speed = 1.5
     evader_speed = 2.5
     game_counter = 0
-    pursuers_array = [5] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
-    evaders_array = [5] #[2, 3, 4, 5, 10, 20, 30, 40, 50, 100, 1000]
+    pursuers_array = [2, 3, 4, 5]
+    evaders_array = [2, 3, 4, 5]
     main_loop(pursuer_speed=pursuer_speed, evader_speed=evader_speed, evaders_array=evaders_array, pursuers_array=pursuers_array, game_counter=game_counter, HumanRender=HumanRender)
 
 def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_array=[], game_counter=0, HumanRender=False):
@@ -212,13 +215,13 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
         for pursuer in pursuers_array:
             num_total_pursuers = pursuer
             game_counter += 1
-            for i in range(1, 10):
+            for i in range(1, 11):
                 seed = random.randint(1, 10000)
 
                 if HumanRender:
-                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True, render_mode='human')
+                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=15, continuous_actions=True, render_mode='human')
                 else:
-                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=50, continuous_actions=True)
+                    env = simple_tag_v3.parallel_env(num_good=num_evaders, num_adversaries=num_total_pursuers, num_obstacles=0, max_cycles=15, continuous_actions=True)
                 observations, infos = env.reset(seed=seed)
 
                 assignments = initialize_agent_types(observations, num_total_pursuers, num_evaders)
@@ -240,7 +243,7 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
 
                     for agent in env.agents:
                         features = all_features[agent]
-                        if 'adversary' in agent:
+                        if 'adversary' in agent: #adversaries are pursuers
                             if agent in assignments:
                                 evader_position = np.concatenate((observations[assignments[agent]][2:4], [0]))  # Include heading (0) in the position
                                 action = cooperative_strategy_continuous(features, evader_position, pursuer_speed)
@@ -255,12 +258,12 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
 
                         total_data.append({
                             'game': game_counter,
-                            'number_of_game_type': i,  # Game round within the game
+                            'number_of_game_type': i,  
                             'game_type': 'Pursuers: {} vs Evaders: {}'.format(num_total_pursuers, num_evaders),  # '1 vs many' or 'many vs many
                             'round': round_counter,
                             'agent': agent,
                             'seed': seed,
-                            'observation': observations[agent].tolist(),
+                            'observation': observations[agent],
                             'action': action.tolist(),
                             'reward': None,
                             'termination': None,
@@ -280,32 +283,23 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
                             'interception_point': None,
                             'distances_to_evaders': features['distances_to_evaders'],
                             'distances_to_pursuers': features['distances_to_pursuers'],
-                            'is_evader_capture': features['is_evader_captured']
+                            'is_evader_capture': features['is_evader_captured'],
+                            'radius': features['radius']
                         })
-
-                    # Update value function
-
-
-
 
 
                     for pos in initial_positions:
                         co_states = compute_co_states(value_function, pos)  
                         H = compute_hamiltonian(pos, evader_position, pursuer_speed, evader_speed, co_states)
                         
-                        # Update control laws 
                         pursuer_heading, evader_heading = update_control_laws(pos, evader_position, co_states)
                         
-                        # Update value functions
-                        control_laws = [pursuer_heading, evader_heading]  # Simplified control laws list
+                        control_laws = [pursuer_heading, evader_heading]  
                         value_function = update_value_function(value_function, initial_positions, control_laws)
                         
-                        # Get interaction points 
+
                         interception_point, radius = calculate_apollonius_circle(pos[:2], evader_position[:2], pursuer_speed / evader_speed)
                         
-                        
-
-
                     observations, rewards, terminations, truncations, infos = env.step(actions)
 
                     for agent in env.agents:
@@ -319,9 +313,9 @@ def main_loop(pursuer_speed=1.5, evader_speed=2.5, evaders_array=[], pursuers_ar
 
                 env.close()
 
-    # Save data to dataframe 
-    df = pd.DataFrame(total_data)
-    df.to_csv('simulation_data_with_features_5_vs_5.csv', index=False)
-    print("Data saved to simulation_data_with_features_many_vs_many.csv")
+            # Save data to dataframe 
+            df = pd.DataFrame(total_data)
+            df.to_csv(f'simulation_data_with_feature_many_{num_evaders}_vs_{num_total_pursuers}.csv', index=False)
+            print("Data saved to simulation_data_with_features_many_vs_many.csv")
 
   
